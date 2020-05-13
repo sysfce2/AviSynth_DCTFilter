@@ -18,39 +18,40 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 */
 
-
-#include <cstdint>
+//#include <cstdlib>
+//#include <cstdint>
 #include <stdexcept>
-#include <algorithm>
-#include <malloc.h>
+//#include <algorithm>
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #define NOGDI
 #define VC_EXTRALEAN
-#include <windows.h>
 #include <avisynth.h>
+//#include <cstdio>
+//#include <cstring>
+//#include <windows.h>
 
 #include "dct.h"
 
 
 
-#define DCT_FILTER_VERSION "0.4.2"
+#define DCT_FILTER_VERSION "0.5.1"
 
 
 typedef IScriptEnvironment ise_t;
 
-extern bool has_sse2();
-extern bool has_sse41();
-extern bool has_avx2();
 
-
-static int check_opt(int opt)
+static int check_opt(int opt, ise_t* env)
 {
-    if (opt == 0 || !has_sse2()) {
+    const bool has_sse2 = env->GetCPUFlags() & CPUF_SSE2;
+    const bool has_sse41 = env->GetCPUFlags() & CPUF_SSE4_1;
+    const bool has_avx2 = env->GetCPUFlags() & CPUF_AVX2;
+
+    if (opt == 0 || !has_sse2) {
         return 0;
-    } else if (opt == 1 || !has_sse41()) {
+    } else if (opt == 1 || !has_sse41) {
         return 1;
-    } else if (opt == 2 || !has_avx2()){
+    } else if (opt == 2 || !has_avx2){
         return 2;
     }
     return 3;
@@ -111,7 +112,6 @@ enum {
 };
 
 class DCTFilter : public GenericVideoFilter {
-    typedef IScriptEnvironment2 ise2_t;
     int numPlanes;
     int planes[3];
     int chroma;
@@ -126,6 +126,7 @@ class DCTFilter : public GenericVideoFilter {
     int bitsPerComponent;
     int mode;
     bool hasAlpha;
+    bool has_at_least_v8;
 
     fdct_idct_func_t mainProc8x8;
     fdct_idct_func_t mainProc4x4;
@@ -147,6 +148,9 @@ DCTFilter::DCTFilter(PClip c, double* f8, double* f4, int dcount8, int dcount4,
         GenericVideoFilter(c), chroma(ch), mode(m),
         isPlus(env->FunctionExists("SetFilterMTMode"))
 {
+    has_at_least_v8 = true;
+    try { env->CheckVersion(8); } catch (const AvisynthError&) { has_at_least_v8 = false; }
+
     if (!vi.IsPlanar()) {
         throw std::runtime_error("input is not planar format.");
     }
@@ -189,24 +193,24 @@ DCTFilter::DCTFilter(PClip c, double* f8, double* f4, int dcount8, int dcount4,
         }
     }
 
-    opt = check_opt(opt);
+    opt = check_opt(opt, env);
 
-    factorsSize = 8 + 8 + 8 + 64 + (opt == 3 ? 32 : 16);
+    factorsSize = static_cast<int64_t>(8) + 8 + 8 + 64 + (opt == 3 ? 32 : 16);
     void* ptr;
-    if (!isPlus) {
+    if (!has_at_least_v8) {
         ptr = _aligned_malloc((factorsSize + 128) * sizeof(float), 32);
         if (!ptr) {
             throw std::runtime_error("failed to create table of factors.");
         }
         env->AtExit([](void* p, ise_t*) { _aligned_free(p); p = nullptr; }, ptr);
     } else {
-        ptr = static_cast<ise2_t*>(
+        ptr = static_cast<ise_t*>(
             env)->Allocate(factorsSize * sizeof(float), 32, AVS_NORMAL_ALLOC);
         if (!ptr) {
             throw std::runtime_error("failed to create table of factors.");
         }
         env->AtExit([](void* p, ise_t* e) {
-            static_cast<ise2_t*>(e)->Free(p); p = nullptr; }, ptr);
+            static_cast<ise_t*>(e)->Free(p); p = nullptr; }, ptr);
     }
     factorsLoad = reinterpret_cast<float*>(ptr);
     factorsStore8x8 = factorsLoad + 8;
@@ -240,13 +244,14 @@ DCTFilter::DCTFilter(PClip c, double* f8, double* f4, int dcount8, int dcount4,
 PVideoFrame __stdcall DCTFilter::GetFrame(int n, ise_t* env)
 {
     auto src = child->GetFrame(n, env);
-    auto dst = env->NewVideoFrame(vi, 32);
+    PVideoFrame dst;
+    if (has_at_least_v8) dst = env->NewVideoFrameP(vi, &src, 32); else dst = env->NewVideoFrame(vi, 32);
 
     float* buff;
-    if (!isPlus) {
+    if (!has_at_least_v8) {
         buff = factorsLoad + factorsSize;
     } else {
-        buff = reinterpret_cast<float*>(static_cast<ise2_t*>(
+        buff = reinterpret_cast<float*>(static_cast<ise_t*>(
             env)->Allocate(128 * sizeof(float), 32, AVS_POOLED_ALLOC));
         if (!buff) {
             env->ThrowError("DCTFilter: failed to allocate temporal buffer.");
@@ -275,8 +280,8 @@ PVideoFrame __stdcall DCTFilter::GetFrame(int n, ise_t* env)
                             4, height8, buff, factors4x4, factorsLoad,
                             factorsStore4x4, bitsPerComponent);
             }
-            srcp += height8 * spitch;
-            dstp += height8 * dpitch;
+            srcp += static_cast<int64_t>(height8) * spitch;
+            dstp += static_cast<int64_t>(height8) * dpitch;
             height -= height8;
         }
 
@@ -304,8 +309,8 @@ PVideoFrame __stdcall DCTFilter::GetFrame(int n, ise_t* env)
                     dst->GetRowSize(PLANAR_A), dst->GetHeight(PLANAR_A));
     }
 
-    if (isPlus) {
-        static_cast<ise2_t*>(env)->Free(buff);
+    if (has_at_least_v8) {
+        static_cast<ise_t*>(env)->Free(buff);
     }
 
     return dst;

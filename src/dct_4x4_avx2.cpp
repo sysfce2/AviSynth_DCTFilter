@@ -203,8 +203,8 @@ static void fdct_idct_4x4x2_avx2(
 
     __m256 s0 = load_and_cvt_to_float_x8_avx2(srcp + spitch * 0, factor_load);
     __m256 s1 = load_and_cvt_to_float_x8_avx2(srcp + spitch * 1, factor_load);
-    __m256 s2 = load_and_cvt_to_float_x8_avx2(srcp + spitch * 2, factor_load);
-    __m256 s3 = load_and_cvt_to_float_x8_avx2(srcp + spitch * 3, factor_load);
+    __m256 s2 = load_and_cvt_to_float_x8_avx2(srcp + static_cast<int64_t>(spitch) * 2, factor_load);
+    __m256 s3 = load_and_cvt_to_float_x8_avx2(srcp + static_cast<int64_t>(spitch) * 3, factor_load);
 
     const __m256 xr2 = _mm256_set1_ps(r2);
     const __m256 xr6 = _mm256_set1_ps(r6);
@@ -214,8 +214,8 @@ static void fdct_idct_4x4x2_avx2(
 
     store_x8_to_dst_avx2(s0, dstp + 0 * dpitch, factor_store);
     store_x8_to_dst_avx2(s1, dstp + 1 * dpitch, factor_store);
-    store_x8_to_dst_avx2(s2, dstp + 2 * dpitch, factor_store);
-    store_x8_to_dst_avx2(s3, dstp + 3 * dpitch, factor_store);
+    store_x8_to_dst_avx2(s2, dstp + 2 * static_cast<int64_t>(dpitch), factor_store);
+    store_x8_to_dst_avx2(s3, dstp + 3 * static_cast<int64_t>(dpitch), factor_store);
 }
 
 
@@ -231,8 +231,8 @@ static void fdct_idct_4x4x2v_avx2(
 
     __m256 s0 = load_and_cvt_to_float_x4x2_avx2(srcp + spitch * 0, vindex, factor_load);
     __m256 s1 = load_and_cvt_to_float_x4x2_avx2(srcp + spitch * 1, vindex, factor_load);
-    __m256 s2 = load_and_cvt_to_float_x4x2_avx2(srcp + spitch * 2, vindex, factor_load);
-    __m256 s3 = load_and_cvt_to_float_x4x2_avx2(srcp + spitch * 3, vindex, factor_load);
+    __m256 s2 = load_and_cvt_to_float_x4x2_avx2(srcp + static_cast<int64_t>(spitch) * 2, vindex, factor_load);
+    __m256 s3 = load_and_cvt_to_float_x4x2_avx2(srcp + static_cast<int64_t>(spitch) * 3, vindex, factor_load);
 
     const __m256 xr2 = _mm256_set1_ps(r2);
     const __m256 xr6 = _mm256_set1_ps(r6);
@@ -240,10 +240,10 @@ static void fdct_idct_4x4x2v_avx2(
 
     const __m256 factor_store = _mm256_load_ps(store);
 
-    store_x4x2_to_dst_avx2(s0, dstp + 0 * dpitch, dstp + 4 * dpitch, factor_store);
-    store_x4x2_to_dst_avx2(s1, dstp + 1 * dpitch, dstp + 5 * dpitch, factor_store);
-    store_x4x2_to_dst_avx2(s2, dstp + 2 * dpitch, dstp + 6 * dpitch, factor_store);
-    store_x4x2_to_dst_avx2(s3, dstp + 3 * dpitch, dstp + 7 * dpitch, factor_store);
+    store_x4x2_to_dst_avx2(s0, dstp + 0 * dpitch, dstp + 4 * static_cast<int64_t>(dpitch), factor_store);
+    store_x4x2_to_dst_avx2(s1, dstp + 1 * dpitch, dstp + 5 * static_cast<int64_t>(dpitch), factor_store);
+    store_x4x2_to_dst_avx2(s2, dstp + 2 * static_cast<int64_t>(dpitch), dstp + 6 * static_cast<int64_t>(dpitch), factor_store);
+    store_x4x2_to_dst_avx2(s3, dstp + 3 * static_cast<int64_t>(dpitch), dstp + 7 * static_cast<int64_t>(dpitch), factor_store);
 }
 
 
@@ -261,8 +261,8 @@ static inline void fdct_idct_avx2(
     if (width == 4 && height != 4) {
         for (int y = 0; y < height; y += 8) {
             fdct_idct_4x4x2v_avx2(s, d, factors, src_pitch, dst_pitch, load, store);
-            s += src_pitch * 8;
-            d += dst_pitch * 8;
+            s += static_cast<int64_t>(src_pitch) * 8;
+            d += static_cast<int64_t>(dst_pitch) * 8;
         }
         return;
     }
@@ -271,8 +271,8 @@ static inline void fdct_idct_avx2(
         for (int x = 0; x < width; x += 8) {
             fdct_idct_4x4x2_avx2(s + x, d + x, factors, src_pitch, dst_pitch, load, store);
         }
-        s += src_pitch * 4;
-        d += dst_pitch * 4;
+        s += static_cast<int64_t>(src_pitch) * 4;
+        d += static_cast<int64_t>(dst_pitch) * 4;
     }
 }
 

@@ -102,8 +102,8 @@ static void fdct_idct_cpp(
 
             float_to_dst_XxX_cpp<T, 4>(buff0, d + x, dst_pitch, store[0]);
         }
-        s += src_pitch * 4;
-        d += dst_pitch * 4;
+        s += static_cast<int64_t>(src_pitch) * 4;
+        d += static_cast<int64_t>(dst_pitch) * 4;
     }
 }
 
@@ -206,8 +206,8 @@ static void fdct_idct_4x4_sse2(
 
     __m128 s0 = load_and_cvt_to_float_x4_sse2(srcp + spitch * 0, factor_load);
     __m128 s1 = load_and_cvt_to_float_x4_sse2(srcp + spitch * 1, factor_load);
-    __m128 s2 = load_and_cvt_to_float_x4_sse2(srcp + spitch * 2, factor_load);
-    __m128 s3 = load_and_cvt_to_float_x4_sse2(srcp + spitch * 3, factor_load);
+    __m128 s2 = load_and_cvt_to_float_x4_sse2(srcp + static_cast<int64_t>(spitch) * 2, factor_load);
+    __m128 s3 = load_and_cvt_to_float_x4_sse2(srcp + static_cast<int64_t>(spitch) * 3, factor_load);
 
     const __m128 xr2 = _mm_set1_ps(r2);
     const __m128 xr6 = _mm_set1_ps(r6);
@@ -231,8 +231,8 @@ static void fdct_idct_4x4_sse2(
 
     store_x4_to_dst_sse2(s0, dstp + 0 * dpitch, factor_store, bits);
     store_x4_to_dst_sse2(s1, dstp + 1 * dpitch, factor_store, bits);
-    store_x4_to_dst_sse2(s2, dstp + 2 * dpitch, factor_store, bits);
-    store_x4_to_dst_sse2(s3, dstp + 3 * dpitch, factor_store, bits);
+    store_x4_to_dst_sse2(s2, dstp + 2 * static_cast<int64_t>(dpitch), factor_store, bits);
+    store_x4_to_dst_sse2(s3, dstp + 3 * static_cast<int64_t>(dpitch), factor_store, bits);
 }
 
 
@@ -251,8 +251,8 @@ static void fdct_idct_sse2(
         for (int x = 0; x < width; x += 4) {
             fdct_idct_4x4_sse2(s + x, d + x, factors, src_pitch, dst_pitch, load, store, bits);
         }
-        s += src_pitch * 4;
-        d += dst_pitch * 4;
+        s += static_cast<int64_t>(src_pitch) * 4;
+        d += static_cast<int64_t>(dst_pitch) * 4;
     }
 }
 

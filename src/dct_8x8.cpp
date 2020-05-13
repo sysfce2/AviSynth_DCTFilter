@@ -148,8 +148,8 @@ static void fdct_idct_cpp(
 
             float_to_dst_XxX_cpp<T, 8>(buff0, d + x, dst_pitch, store[0]);
         }
-        s += src_pitch * 8;
-        d += dst_pitch * 8;
+        s += src_pitch * static_cast < int64_t>(8);
+        d += dst_pitch * static_cast <int64_t>(8);
     }
 }
 
@@ -394,8 +394,8 @@ static void fdct_idct_sse2(
 
             float_to_dst_8x8_sse2<T, HAS_SSE41>(buff0, d + x, dst_pitch, store, bits);
         }
-        s += src_pitch * 8;
-        d += dst_pitch * 8;
+        s += src_pitch * static_cast <int64_t>(8);
+        d += dst_pitch * static_cast <int64_t>(8);
     }
 }
 
