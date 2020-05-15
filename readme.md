@@ -2,13 +2,13 @@
 	This plugin is a rewrite of DctFilter for avisynth.
 
 ### Version:
-	0.5.0
+	0.5.1
 
 ### Requirement:
 	- Windows Vista sp2 or later
 	- SSE2 capable CPU
 	- Avisynth 2.60 / Avisynth+MT r2085 or later
-	- Microsoft VisualC++ Redistributable Package 2015.
+	- Microsoft VisualC++ Redistributable Package 2019.
 
 ### Usage:
 ```
