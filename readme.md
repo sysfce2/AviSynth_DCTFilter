@@ -1,4 +1,4 @@
-##DCTFilter
+## DCTFilter
 	This plugin is a rewrite of DctFilter for avisynth.
 
 ### Version:
